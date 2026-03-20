@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Location, Message } from '../types';
+import { Clock } from 'lucide-react';
 
 interface MapScreenProps {
   key?: string;
@@ -12,28 +13,80 @@ interface MapScreenProps {
   streak: number;
 }
 
+const getDifficultyLevel = (locationId: string): 'Beginner' | 'Intermediate' | 'Advanced' => {
+  const beginnerLocations = ['bakery', 'cafe', 'supermarket'];
+  const intermediateLocations = ['apartment', 'market', 'bistro'];
+  const advancedLocations = ['prefecture', 'doctor', 'train', 'pharmacy'];
+
+  if (beginnerLocations.includes(locationId)) return 'Beginner';
+  if (intermediateLocations.includes(locationId)) return 'Intermediate';
+  if (advancedLocations.includes(locationId)) return 'Advanced';
+  return 'Beginner';
+};
+
+const getDifficultyColor = (level: 'Beginner' | 'Intermediate' | 'Advanced'): string => {
+  switch (level) {
+    case 'Beginner':
+      return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+    case 'Intermediate':
+      return 'bg-amber-100 text-amber-800 border-amber-300';
+    case 'Advanced':
+      return 'bg-red-100 text-red-800 border-red-300';
+  }
+};
+
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1
+      staggerChildren: 0.08,
+      delayChildren: 0.1
     }
   }
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 }
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.4,
+      ease: "easeOut"
+    }
+  }
 };
 
 export function MapScreen({ locations, completedLocations, onSelectLocation, chats, dailyChallenge, streak }: MapScreenProps) {
   const [activeFilter, setActiveFilter] = useState<string>('All');
+  const [timeUntilRefresh, setTimeUntilRefresh] = useState<string>('');
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+
+      const diff = tomorrow.getTime() - now.getTime();
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+      setTimeUntilRefresh(`${hours}h ${minutes}m`);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const districts = Array.from(new Set(locations.map(l => l.district)));
   const filters = ['All', ...districts];
 
-  const filteredLocations = activeFilter === 'All' 
-    ? locations 
+  const filteredLocations = activeFilter === 'All'
+    ? locations
     : locations.filter(l => l.district === activeFilter);
 
   const displayedDistricts = activeFilter === 'All' ? districts : [activeFilter];
@@ -80,23 +133,35 @@ export function MapScreen({ locations, completedLocations, onSelectLocation, cha
         <motion.button
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
+          whileHover={{ scale: 1.02 }}
           onClick={() => onSelectLocation(dailyChallenge.locationId)}
-          className="w-full bg-gradient-to-r from-amber-200 to-yellow-400 text-amber-950 p-4 md:p-5 rounded-2xl shadow-sm border border-amber-300 flex items-center justify-between hover:shadow-md transition-all hover:scale-[1.01] text-left group"
+          className="w-full bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-200 text-amber-950 p-5 md:p-6 rounded-2xl shadow-md border-2 border-amber-400 flex items-center justify-between hover:shadow-lg transition-shadow text-left group relative overflow-hidden"
         >
-          <div className="flex items-center gap-4">
-            <div className="bg-white/50 p-3 rounded-xl text-2xl group-hover:scale-110 transition-transform hidden sm:block">
+          <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-10 transition-opacity" />
+          <div className="relative z-10 flex items-center gap-4 flex-1">
+            <motion.div
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="bg-white/60 p-3 rounded-xl text-2xl hidden sm:block flex-shrink-0"
+            >
               ⭐
-            </div>
-            <div>
-              <div className="font-bold text-xs uppercase tracking-wider opacity-80 mb-1">Daily Challenge</div>
-              <div className="text-lg font-medium leading-tight">{dailyChallenge.text}</div>
-              <div className="text-sm font-medium opacity-75 mt-1.5 flex items-center gap-1">
+            </motion.div>
+            <div className="flex-1">
+              <div className="font-bold text-xs uppercase tracking-widest opacity-90 mb-1">Daily Challenge</div>
+              <div className="text-lg font-bold leading-tight mb-2">{dailyChallenge.text}</div>
+              <div className="text-sm font-medium opacity-80 flex items-center gap-1">
                 📍 {locations.find(l => l.id === dailyChallenge.locationId)?.name}
               </div>
             </div>
           </div>
-          <div className="bg-white/40 px-4 py-2 rounded-xl font-bold text-sm whitespace-nowrap ml-4">
-            Go →
+          <div className="relative z-10 flex flex-col items-end gap-2 ml-4">
+            <div className="flex items-center gap-1.5 bg-white/70 px-3 py-1.5 rounded-lg font-bold text-xs tracking-wide">
+              <Clock size={14} />
+              {timeUntilRefresh}
+            </div>
+            <div className="bg-white/50 px-4 py-2 rounded-lg font-bold text-sm">
+              Go →
+            </div>
           </div>
         </motion.button>
       )}
@@ -131,30 +196,52 @@ export function MapScreen({ locations, completedLocations, onSelectLocation, cha
               {filteredLocations.filter(l => l.district === district).map((loc) => {
                 const isCompleted = completedLocations.includes(loc.id);
                 const hasStarted = chats[loc.id] && chats[loc.id].length > 0;
-                
+                const difficulty = getDifficultyLevel(loc.id);
+
                 return (
                   <motion.button
                     variants={itemVariants}
                     key={loc.id}
                     onClick={() => onSelectLocation(loc.id)}
-                    className={`relative flex flex-col items-start p-6 rounded-3xl text-left transition-all hover:scale-[1.02] hover:shadow-xl border bg-gradient-to-br shadow-sm overflow-hidden group ${
-                      isCompleted 
-                        ? 'from-emerald-50 to-emerald-100/80 border-emerald-300 text-emerald-950 ring-2 ring-emerald-500/20' 
-                        : `border-white/50 ${loc.color}`
+                    className={`relative flex flex-col items-start p-6 rounded-3xl text-left transition-all hover:shadow-xl border bg-gradient-to-br shadow-sm overflow-hidden group ${
+                      isCompleted
+                        ? 'from-emerald-50 to-emerald-100/80 border-emerald-300 text-emerald-950 ring-2 ring-emerald-500/20'
+                        : `border-white/50 ${loc.color} hover:shadow-2xl`
                     }`}
                   >
-                    {!hasStarted && (
-                      <span className="absolute top-4 right-4 bg-white/90 text-xs font-bold px-3 py-1.5 rounded-full shadow-sm text-stone-700 tracking-wide">
-                        NEW
-                      </span>
-                    )}
                     {isCompleted && (
-                      <span className="absolute top-4 right-4 bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1.5 tracking-wide">
-                        <span className="text-[10px]">✓</span> EXPLORED
-                      </span>
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center pointer-events-none"
+                      >
+                        <motion.div
+                          animate={{ scale: [0.9, 1.1, 1] }}
+                          transition={{ duration: 0.5, delay: 0.2 }}
+                          className="text-6xl"
+                        >
+                          ✓
+                        </motion.div>
+                      </motion.div>
                     )}
-                    
-                    <div className="text-6xl mb-4 bg-white/40 p-4 rounded-2xl shadow-sm group-hover:scale-110 transition-transform">
+
+                    <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2">
+                      <div className={`text-xs font-bold px-3 py-1.5 rounded-full border shadow-sm tracking-wide ${getDifficultyColor(difficulty)}`}>
+                        {difficulty}
+                      </div>
+                      {!hasStarted && !isCompleted && (
+                        <span className="bg-white/90 text-xs font-bold px-3 py-1.5 rounded-full shadow-sm text-stone-700 tracking-wide">
+                          NEW
+                        </span>
+                      )}
+                      {isCompleted && (
+                        <span className="bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1.5 tracking-wide">
+                          <span>✓</span> EXPLORED
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-6xl mb-4 mt-6 bg-white/40 p-4 rounded-2xl shadow-sm group-hover:scale-110 transition-transform">
                       {loc.icon}
                     </div>
                     <div>
