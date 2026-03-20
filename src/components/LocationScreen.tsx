@@ -35,6 +35,9 @@ export function LocationScreen({ location, messages, isCompleted, onSendMessage,
 
   const REACTIONS = ['👍', '😂', '🤔'];
 
+  const userMessageCount = messages.filter(m => m.senderId === 'user').length;
+  const progressPercent = Math.min((userMessageCount / 3) * 100, 100);
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -42,6 +45,16 @@ export function LocationScreen({ location, messages, isCompleted, onSendMessage,
       exit={{ opacity: 0, scale: 1.05 }}
       className="bg-white rounded-3xl shadow-xl overflow-hidden border border-stone-200 flex flex-col h-[calc(100vh-120px)]"
     >
+      {/* Progress Bar */}
+      <div className="h-1 bg-stone-200 relative overflow-hidden">
+        <motion.div
+          className="h-full bg-gradient-to-r from-blue-500 to-emerald-500"
+          initial={{ width: 0 }}
+          animate={{ width: `${progressPercent}%` }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        />
+      </div>
+
       {/* Location Header */}
       <div className={`bg-gradient-to-r ${location.color} p-6 flex flex-col gap-4 relative overflow-hidden`}>
         <div className="absolute top-0 right-0 opacity-10 text-9xl -mt-4 -mr-4 pointer-events-none">
@@ -85,20 +98,31 @@ export function LocationScreen({ location, messages, isCompleted, onSendMessage,
           {messages.map((msg) => {
             const isUser = msg.senderId === 'user';
             return (
-              <motion.div 
-                key={msg.id} 
+              <motion.div
+                key={msg.id}
                 initial={{ opacity: 0, x: isUser ? 20 : -20 }}
                 animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
                 className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}
               >
                 {!isUser && (
-                  <div className="text-3xl mr-3 mt-1 flex-shrink-0">{location.npc.avatar}</div>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-3xl mr-3 mt-1 flex-shrink-0"
+                  >
+                    {location.npc.avatar}
+                  </motion.div>
                 )}
                 <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[75%]`}>
-                  <div 
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.1 }}
                     className={`p-4 rounded-2xl ${
-                      isUser 
-                        ? 'bg-blue-600 text-white rounded-br-sm shadow-md' 
+                      isUser
+                        ? 'bg-blue-600 text-white rounded-br-sm shadow-md'
                         : 'bg-white border border-stone-200 text-stone-900 rounded-bl-sm shadow-sm'
                     }`}
                   >
@@ -107,8 +131,8 @@ export function LocationScreen({ location, messages, isCompleted, onSendMessage,
                         if (/\s+/.test(part)) return part;
                         const cleanWord = part.replace(/[.,!?¿¡"']/g, '');
                         return (
-                          <span 
-                            key={i} 
+                          <span
+                            key={i}
                             onClick={() => cleanWord && onWordClick(cleanWord)}
                             className="cursor-pointer hover:bg-stone-200 hover:text-stone-900 rounded px-0.5 transition-colors"
                             title="Tap to translate & save"
@@ -118,25 +142,42 @@ export function LocationScreen({ location, messages, isCompleted, onSendMessage,
                         );
                       })}
                     </p>
-                  </div>
-                  
+                  </motion.div>
+
                   {/* Reactions */}
                   {!isUser && (
-                    <div className="flex gap-1 mt-2 ml-2">
-                      {REACTIONS.map(reaction => (
-                        <button
-                          key={reaction}
-                          onClick={() => onReaction(msg.id, reaction)}
-                          className={`text-sm p-1.5 rounded-full transition-all hover:scale-110 ${
-                            msg.reaction === reaction 
-                              ? 'bg-blue-100 border border-blue-300 shadow-sm' 
-                              : 'bg-white/80 border border-stone-200 hover:bg-white shadow-sm opacity-60 hover:opacity-100'
-                          }`}
-                        >
-                          {reaction}
-                        </button>
-                      ))}
-                    </div>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3, delay: 0.2 }}
+                      className="flex gap-1.5 mt-2 ml-2"
+                    >
+                      {REACTIONS.map((reaction, idx) => {
+                        const colors = [
+                          'hover:bg-emerald-50 hover:border-emerald-300',
+                          'hover:bg-amber-50 hover:border-amber-300',
+                          'hover:bg-slate-50 hover:border-slate-300'
+                        ];
+                        const activeColors = [
+                          'bg-emerald-100 border-emerald-400 shadow-md',
+                          'bg-amber-100 border-amber-400 shadow-md',
+                          'bg-slate-100 border-slate-400 shadow-md'
+                        ];
+                        return (
+                          <button
+                            key={reaction}
+                            onClick={() => onReaction(msg.id, reaction)}
+                            className={`text-base p-2 rounded-full transition-all hover:scale-125 border ${
+                              msg.reaction === reaction
+                                ? activeColors[idx]
+                                : `bg-white/90 border-stone-200 ${colors[idx]} shadow-sm`
+                            }`}
+                          >
+                            {reaction}
+                          </button>
+                        );
+                      })}
+                    </motion.div>
                   )}
                 </div>
               </motion.div>

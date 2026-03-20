@@ -101,6 +101,7 @@ const initialState: AppState = {
   isWordsModalOpen: false,
   streak: 1,
   lastSessionDate: null,
+  xp: 0,
 };
 
 export default function App() {
@@ -202,20 +203,26 @@ export default function App() {
       const langChats = prev.chats[lang] || {};
       const currentChat = [...(langChats[locationId] || []), userMessage];
       const userMessageCount = currentChat.filter(m => m.senderId === 'user').length;
-      
+
       const completedLangs = prev.completedLocations[lang] || [];
       const justCompleted = userMessageCount >= 3 && !completedLangs.includes(locationId);
       const newCompleted = justCompleted
         ? [...completedLangs, locationId]
         : completedLangs;
 
+      const xpGain = justCompleted ? 50 : 10;
+
       if (justCompleted) {
-        setToast('Location explored!');
+        setToast('Location explored! +50 XP');
         setTimeout(() => setToast(null), 2000);
+      } else {
+        setToast('+10 XP');
+        setTimeout(() => setToast(null), 1500);
       }
 
       return {
         ...prev,
+        xp: prev.xp + xpGain,
         chats: {
           ...prev.chats,
           [lang]: {
@@ -332,12 +339,12 @@ export default function App() {
             <span className="text-stone-900">Lingo</span>
             <span className="text-blue-600">Life</span>
           </h1>
-          
+
           <div className="relative group">
             <div className="flex items-center gap-1.5 sm:gap-2 bg-stone-100 hover:bg-stone-200 transition-colors border border-stone-200 rounded-full px-3 sm:px-4 py-1.5 cursor-pointer">
               <Globe size={16} className="text-stone-500 hidden sm:block" />
               <span className="text-lg">{LANGUAGE_FLAGS[state.targetLanguage]}</span>
-              <select 
+              <select
                 value={state.targetLanguage}
                 onChange={(e) => handleLanguageChange(e.target.value as Language)}
                 className="bg-transparent border-none text-sm font-bold text-stone-700 focus:ring-0 outline-none cursor-pointer appearance-none pr-4"
@@ -355,6 +362,20 @@ export default function App() {
               </div>
             </div>
           </div>
+
+          <motion.div
+            key={state.xp}
+            initial={{ scale: 1 }}
+            animate={{ scale: [1, 1.15, 1] }}
+            transition={{ duration: 0.3 }}
+            className="flex items-center gap-2 bg-gradient-to-r from-amber-100 to-yellow-100 border border-amber-300 rounded-full px-4 py-1.5 shadow-sm"
+          >
+            <span className="text-lg">⭐</span>
+            <div className="flex flex-col items-start">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 leading-none">XP</span>
+              <span className="text-sm font-black text-amber-900 leading-none">{state.xp}</span>
+            </div>
+          </motion.div>
         </div>
         
         <div className="flex items-center gap-4">

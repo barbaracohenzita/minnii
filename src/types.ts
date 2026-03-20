@@ -48,4 +48,5 @@ export interface AppState {
   isWordsModalOpen: boolean;
   streak: number;
   lastSessionDate: string | null;
+  xp: number;
 }
